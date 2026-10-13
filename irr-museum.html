@@ -1,0 +1,942 @@
+<title>iRR 605 im Museum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600&family=Silkscreen&family=Spectral:ital@1&display=swap">
+<style>
+/* Layout: Museumsvitrine – der Spielbildschirm hängt als Exponat im Messingrahmen, Steuerung und Schild bilden den Sockel */
+:root{
+  --bg:#140b12;
+  --spot:#3a1a2c;
+  --wall:#2b1622;
+  --wall-2:#3d2030;
+  --brass:#c9a24a;
+  --brass-dim:#8a6a2a;
+  --fg:#efe4d0;
+  --muted:#b4a28e;
+  --ink:#1a1c2c;
+  --led:#a7f070;
+  --alarm:#ef7d57;
+  --rose:#b13e53;
+  --sky:#41a6f6;
+  --violet:#5d275d;
+  --f-pixel:"Silkscreen", ui-monospace, "Courier New", monospace;
+  --f-body:"Pixelify Sans", ui-monospace, "Courier New", monospace;
+  --f-plaque:"Spectral", Georgia, "Times New Roman", serif;
+  --sw:min(100%, 768px, max(280px, calc((100dvh - 270px) * 256 / 224)));
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{
+  margin:0;
+  background:radial-gradient(ellipse 70% 45% at 50% 0%, var(--spot) 0%, var(--bg) 100%) var(--bg);
+  color:var(--fg);
+  font-family:var(--f-body);
+  -webkit-tap-highlight-color:transparent;
+}
+.cabinet{
+  min-height:100%;
+  box-sizing:border-box;
+  padding-inline:16px;
+  padding-block:14px 24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+}
+.topbar,.hud,.controls,.keys,.plaque{width:var(--sw);max-width:100%;box-sizing:border-box}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.eyebrow{margin:0;font-family:var(--f-pixel);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tools{display:flex;gap:6px}
+.chip{
+  font-family:var(--f-pixel);font-size:11px;letter-spacing:.06em;
+  background:transparent;color:var(--fg);border:0;
+  box-shadow:inset 0 0 0 2px var(--brass-dim);
+  padding:6px 10px;cursor:pointer;
+}
+.chip:hover{box-shadow:inset 0 0 0 2px var(--brass)}
+.chip:focus-visible,.btn:focus-visible,.turbo:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+
+/* HUD */
+.hud{
+  display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;justify-content:space-between;
+  font-family:var(--f-pixel);font-size:11px;letter-spacing:.06em;
+  padding:6px 10px;background:var(--wall);box-shadow:inset 0 0 0 2px var(--wall-2);
+}
+.hud .it{display:flex;align-items:center;gap:6px;min-width:0}
+.hud .lab{color:var(--muted);text-transform:uppercase}
+.hud .val{color:var(--fg);font-variant-numeric:tabular-nums}
+.bar{width:52px;height:8px;background:var(--ink);box-shadow:0 0 0 1px var(--brass-dim);position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;width:100%;background:var(--led)}
+.bar i[data-low="true"]{background:var(--alarm)}
+.bar.sneeze{width:36px}
+.bar.sneeze i{background:var(--sky)}
+
+/* Bildschirm */
+.screen{
+  position:relative;width:var(--sw);max-width:100%;aspect-ratio:256/224;
+  container-type:inline-size;
+  background:var(--ink);
+  box-shadow:0 0 0 3px var(--brass-dim),0 0 0 6px var(--ink),0 0 0 8px var(--brass),0 18px 40px rgba(0,0,0,.6);
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  overflow:hidden;
+}
+#game{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges}
+
+.dialog{
+  position:absolute;left:3%;right:3%;bottom:3%;
+  min-height:25%;box-sizing:border-box;
+  background:rgba(26,28,44,.95);
+  border:2px solid var(--brass);
+  box-shadow:inset 0 0 0 2px var(--ink),inset 0 0 0 3px var(--brass-dim);
+  padding:3.4cqw 3.4cqw 3cqw;
+  font-size:clamp(13px,4.2cqw,23px);line-height:1.3;
+  cursor:pointer;
+}
+.dialog p{margin:0;min-height:2.6em;text-wrap:pretty}
+.dname{
+  position:absolute;top:0;left:3cqw;transform:translateY(-55%);
+  font-family:var(--f-pixel);font-size:clamp(9px,2.6cqw,14px);letter-spacing:.06em;
+  background:var(--brass);color:var(--ink);padding:.25em .7em;
+}
+.dialog[data-who="fortuna"] .dname{background:var(--rose);color:var(--fg)}
+.dialog[data-who="video"] .dname{background:var(--sky);color:var(--ink)}
+.dialog[data-who="tafel"] .dname{background:var(--fg);color:var(--ink)}
+.dialog[data-who="wiki"] .dname{background:var(--led);color:var(--ink)}
+.dialog[data-who="hint"] .dname{background:var(--violet);color:var(--fg)}
+.dialog[data-who="tafel"] p{font-family:var(--f-plaque);font-style:italic}
+.dnext{position:absolute;right:2.6cqw;bottom:1.6cqw;font-size:.7em;color:var(--brass);opacity:0}
+.dialog.done .dnext{opacity:1;animation:bob .8s steps(2) infinite}
+@keyframes bob{50%{transform:translateY(25%)}}
+
+.bubble{
+  position:absolute;transform:translate(-50%,-100%);
+  font-family:var(--f-pixel);font-size:clamp(9px,2.8cqw,15px);
+  background:var(--fg);color:var(--ink);
+  padding:.15em .45em;box-shadow:0 0 0 2px var(--ink);
+  white-space:nowrap;pointer-events:none;
+  animation:pop .3s steps(3);
+}
+@keyframes pop{from{transform:translate(-50%,-60%) scale(.6)}}
+
+.overlay{
+  position:absolute;inset:0;box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.6cqw;
+  padding:5cqw;text-align:center;
+  background:rgba(20,11,18,.86);
+}
+.overlay h1,.overlay h2{margin:0;font-family:var(--f-pixel);font-weight:400;text-wrap:balance;line-height:1.05}
+.overlay h1{font-size:clamp(22px,9cqw,60px);letter-spacing:.04em;color:var(--fg)}
+.overlay h1 span{display:block;font-size:.45em;color:var(--brass);letter-spacing:.14em;margin-top:.4em}
+.overlay h2{font-size:clamp(16px,6cqw,36px)}
+.overlay .eyebrow{font-size:clamp(9px,2.5cqw,13px)}
+.overlay p{margin:0;font-size:clamp(12px,3.6cqw,20px);line-height:1.35;max-width:34em}
+#titleSpr{width:38cqw;image-rendering:pixelated}
+.row{display:flex;gap:2.4cqw;flex-wrap:wrap;justify-content:center}
+.btn{
+  font-family:var(--f-pixel);font-size:clamp(11px,3.1cqw,17px);letter-spacing:.06em;
+  background:var(--brass);color:var(--ink);border:0;
+  padding:.65em 1.2em;box-shadow:0 3px 0 var(--brass-dim);cursor:pointer;
+}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--brass-dim)}
+.btn.ghost{background:transparent;color:var(--fg);box-shadow:inset 0 0 0 2px var(--brass)}
+.stats{font-family:var(--f-pixel);color:var(--brass);font-variant-numeric:tabular-nums}
+.tease{color:var(--fg)}
+.credit{color:var(--muted);font-family:var(--f-plaque);font-style:italic}
+
+.gallery{justify-content:flex-start;overflow-y:auto;gap:3cqw}
+.galhead{display:flex;justify-content:space-between;align-items:center;width:100%;gap:8px}
+.gal{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2.6cqw;width:100%}
+.card{margin:0;background:var(--wall);box-shadow:inset 0 0 0 2px var(--wall-2);padding:2.4cqw;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:1.6cqw;min-width:0}
+.card.wide{grid-column:span 2}
+.card canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.card.tall canvas{width:auto;height:44cqw;max-width:100%}
+.card.small canvas{width:60%}
+.card figcaption{font-family:var(--f-pixel);font-size:clamp(8px,2.3cqw,12px);color:var(--muted);letter-spacing:.04em}
+.galnote{color:var(--muted);font-size:clamp(11px,3cqw,16px)!important;text-align:left}
+
+/* Steuerung */
+.controls{display:none;justify-content:space-between;align-items:center;padding-top:4px}
+body.touch .controls{display:flex}
+body.touch .keys{display:none}
+.stick{
+  width:132px;height:132px;border-radius:50%;position:relative;touch-action:none;
+  background:radial-gradient(circle, var(--wall-2) 0 38%, var(--wall) 39% 100%);
+  box-shadow:inset 0 0 0 3px var(--brass-dim),0 6px 0 var(--ink);
+}
+.knob{
+  position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%, var(--fg) 0 12%, var(--brass) 13% 70%, var(--brass-dim) 71%);
+  box-shadow:0 4px 0 var(--ink);pointer-events:none;
+}
+.turbo{
+  width:92px;height:92px;border-radius:50%;border:0;cursor:pointer;touch-action:none;
+  font-family:var(--f-pixel);font-size:14px;letter-spacing:.06em;
+  background:radial-gradient(circle at 40% 35%, var(--alarm) 0 30%, var(--rose) 31%);
+  color:var(--fg);box-shadow:0 6px 0 var(--ink),inset 0 0 0 3px var(--ink);
+}
+.turbo:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink),inset 0 0 0 3px var(--ink)}
+.keys{margin:0;font-family:var(--f-pixel);font-size:11px;letter-spacing:.05em;color:var(--muted);text-align:center;line-height:1.7}
+.keys kbd{font-family:inherit;color:var(--fg);box-shadow:inset 0 0 0 1px var(--brass-dim);padding:1px 5px}
+
+.plaque{
+  margin:6px 0 0;padding:12px 16px;
+  background:linear-gradient(170deg,var(--brass) 0%,var(--brass-dim) 100%);
+  color:var(--ink);box-shadow:0 0 0 2px var(--ink),0 4px 0 2px var(--ink);
+  font-family:var(--f-plaque);font-style:italic;font-size:15px;line-height:1.45;
+}
+.plaque strong{font-family:var(--f-pixel);font-style:normal;font-weight:400;letter-spacing:.06em;font-size:13px}
+.plaque small{display:block;margin-top:4px;font-size:13px;opacity:.85}
+@media (prefers-reduced-motion:reduce){.bubble,.dialog.done .dnext{animation:none}}
+</style>
+
+<main class="cabinet">
+  <div class="topbar">
+    <p class="eyebrow">Nullsummenspiel · Prototyp · Raum 1</p>
+    <div class="tools">
+      <button class="chip" id="btnSound" type="button">Ton an</button>
+      <button class="chip" id="btnGalTop" type="button">Sprites</button>
+    </div>
+  </div>
+
+  <div class="hud" aria-live="off">
+    <div class="it"><span class="lab">Akku</span><span class="bar"><i id="hBat"></i></span></div>
+    <div class="it"><span class="lab">Sauber</span><span class="val" id="hClean">0 %</span></div>
+    <div class="it"><span class="lab">Punkte</span><span class="val" id="hScore">0</span></div>
+    <div class="it"><span class="lab">Exponate</span><span class="val" id="hExp">0/6</span></div>
+    <div class="it"><span class="lab">Niesreiz</span><span class="bar sneeze"><i id="hSneeze" style="width:0"></i></span></div>
+  </div>
+
+  <div class="screen" id="screen">
+    <canvas id="game" width="256" height="224" aria-label="Spielfeld: Museumsraum mit iRR 605"></canvas>
+    <div id="bubbles"></div>
+
+    <div class="dialog" id="dialog" hidden>
+      <span class="dname" id="dname">iRR 605</span>
+      <p id="dtext"></p>
+      <span class="dnext">▼</span>
+    </div>
+
+    <div class="overlay" id="title">
+      <p class="eyebrow">Ein Spiel zu „Nullsummenspiel“</p>
+      <h1>iRR 605<span>im Museum</span></h1>
+      <canvas id="titleSpr" width="40" height="22"></canvas>
+      <div class="row">
+        <button class="btn" id="btnPlay" type="button">Spielen</button>
+        <button class="btn ghost" id="btnGal" type="button">Sprite-Galerie</button>
+      </div>
+    </div>
+
+    <div class="overlay gallery" id="gallery" hidden>
+      <div class="galhead">
+        <h2>Sprite-Galerie</h2>
+        <button class="btn ghost" id="btnGalClose" type="button">Zurück</button>
+      </div>
+      <div class="gal">
+        <figure class="card small"><canvas data-g="irr" width="18" height="18"></canvas><figcaption>iRR 605 · 16×16 px</figcaption></figure>
+        <figure class="card tall"><canvas data-g="fortuna" width="34" height="54"></canvas><figcaption>Die Große Fortuna · 30×50 px</figcaption></figure>
+        <figure class="card wide"><canvas data-g="dirs" width="76" height="18"></canvas><figcaption>Vier Blickrichtungen · Seitenbürste dreht · Blinzeln</figcaption></figure>
+        <figure class="card wide"><canvas data-g="tumble" width="76" height="18"></canvas><figcaption>Kabel-Tumbleweed · vier Rollphasen</figcaption></figure>
+        <figure class="card"><canvas data-g="dust" width="36" height="18"></canvas><figcaption>Staub &amp; Wollmaus</figcaption></figure>
+        <figure class="card"><canvas data-g="tv" width="30" height="32"></canvas><figcaption>Erklärvideo-Fernseher</figcaption></figure>
+      </div>
+      <p class="galnote">Alles ist direkt im Code als Pixel-Raster gezeichnet, mit 16 Farben. Eigene Pixel-Art lässt sich später Bild für Bild austauschen.</p>
+    </div>
+
+    <div class="overlay" id="end" hidden>
+      <p class="eyebrow">Raum 1 · Abteilung für bildende Künste</p>
+      <h2>Die Tür is uff.</h2>
+      <p class="stats"><span id="eScore">0</span> Punkte · <span id="eExp">0</span>/6 Exponate · <span id="eTime">0:00</span></p>
+      <p class="tease">Bald kommt Besuch ins Museum. Mit Zylinder.<br>Wie es weitergeht, siehst du im Theater.</p>
+      <p class="credit">„Nullsummenspiel“ von Jan Heißler &amp; Linn Mann · Termine folgen</p>
+      <button class="btn" id="btnAgain" type="button">Nochmal</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="stick" id="stick" aria-label="Steuerkreuz"><div class="knob" id="knob"></div></div>
+    <button class="turbo" id="btnTurbo" type="button">Turbo</button>
+  </div>
+  <p class="keys"><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> oder <kbd>WASD</kbd> fahren · <kbd>Leertaste</kbd> Turbo und weiter</p>
+
+  <p class="plaque">
+    <strong>iRR 605</strong> · Staubsaugerroboter. Stauballergie. Gelegentliche Sprach- und Orientierungsschwierigkeiten. Seit über 560 Jahren im Museumsdienst.
+    <small>Aus „Nullsummenspiel“ von Jan Heißler &amp; Linn Mann</small>
+  </p>
+</main>
+
+<script>
+(() => {
+'use strict';
+const W = 256, H = 224;
+const $ = s => document.querySelector(s);
+const cv = $('#game'), ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+/* ---------- Palette (Sweetie 16) ---------- */
+const P = {k:'#1a1c2c',d:'#333c57',g:'#566c86',l:'#94b0c2',w:'#f4f4f4',G:'#a7f070',e:'#38b764',t:'#257179',
+  y:'#ffcd75',o:'#ef7d57',r:'#b13e53',p:'#5d275d',b:'#41a6f6',B:'#3b5dc9',c:'#73eff7',n:'#29366f'};
+const BRASS = '#c9a24a', BRASS_D = '#8a6a2a';
+
+const rect = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+function rng(seed){ let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
+function gridCanvas(rows){
+  const h = rows.length, w = rows[0].length;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  rows.forEach((row, j) => {
+    if (row.length !== w) console.error('Sprite-Zeile hat falsche Länge', j, row);
+    for (let i = 0; i < w; i++){ const ch = row[i]; if (ch !== '.' && P[ch]){ x.fillStyle = P[ch]; x.fillRect(i, j, 1, 1); } }
+  });
+  return c;
+}
+function shadow(c, cx, cy, rx, ry){
+  c.fillStyle = 'rgba(0,0,0,.28)';
+  for (let dy = -ry; dy <= ry; dy++){ const w = Math.round(rx * Math.sqrt(1 - (dy / (ry + .5)) ** 2)); c.fillRect(Math.round(cx - w), Math.round(cy + dy), w * 2, 1); }
+}
+
+/* ---------- iRR 605 Sprite (16×16, von Hand gepixelt) ---------- */
+const TOP = [
+  '................',
+  '....kkkkkkkk....',
+  '..kkllwwllllkk..',
+  '.klwwddddddddlk.',
+  'klwddddddddddglk',
+  'kldddddggddddglk',
+  'klddddgGGgdddglk',
+  'kldddddggddddglk',
+  'klddddddddddgglk',
+  'kllddddddddggllk',
+  'kkllllllllllllkk',
+];
+const BAND = {
+  down:['kdgggwwggwwgggdk','kdgggwkggkwgggdk','kddggggggggggddk','.kkkkkkkkkkkkkk.','................'],
+  up:  ['kddddddddddddddk','kdddggggggggdddk','kddddddddddddddk','.kkkkkkkkkkkkkk.','................'],
+  left:['kdwwggwwgggggddk','kdkwggkwgggggddk','kddggggggggggddk','.kkkkkkkkkkkkkk.','................'],
+};
+BAND.right = BAND.left.map(r => r.split('').reverse().join(''));
+const blinkBand = b => b.map((r, i) => i === 0 ? r.replace(/w/g, 'g') : i === 1 ? r.replace(/w/g, 'k') : r);
+const SPR = { irr:{} };
+for (const d of ['down','up','left','right']) SPR.irr[d] = [gridCanvas(TOP.concat(BAND[d])), gridCanvas(TOP.concat(blinkBand(BAND[d])))];
+const BRUSH = { down:[2,14], left:[2,14], right:[13,14], up:[12,2] };
+const DIRV = { down:[0,1], up:[0,-1], left:[-1,0], right:[1,0] };
+
+function drawIrrAt(c, x, y, dir, time, opts = {}){
+  const blink = opts.blink ?? ((time % 3.3) < 0.13);
+  c.drawImage(SPR.irr[dir][blink ? 1 : 0], x, y);
+  if (opts.led) { c.fillStyle = opts.led; c.fillRect(x + 7, y + 6, 2, 1); }
+  if (dir === 'up') return;
+  const f = Math.floor(time * 18) % 2;
+  const [bx, by] = BRUSH[dir];
+  const pts = f ? [[2,0],[-1,-1],[-1,1]] : [[-2,0],[1,-1],[1,1]];
+  c.fillStyle = P.l; for (const [px, py] of pts) c.fillRect(x + bx + px, y + by + py, 1, 1);
+  c.fillStyle = P.y; c.fillRect(x + bx, y + by, 1, 1);
+}
+
+/* ---------- Kabel-Tumbleweed (prozedural verknotet) ---------- */
+function tumbleGrid(seed){
+  const R = rng(seed);
+  const g = Array.from({length:16}, () => Array(16).fill('.'));
+  const plot = (x, y, ch) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < 16 && y >= 0 && y < 16) g[y][x] = ch; };
+  const line = (x0, y0, x1, y1, ch) => { const n = Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * 1.5) + 1; for (let i = 0; i <= n; i++){ const t = i / n; plot(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, ch); } };
+  for (let a = 0; a < Math.PI * 2; a += 0.11) if (R() < 0.82) plot(7.5 + Math.cos(a) * 6.3, 7.5 + Math.sin(a) * 6.1, R() < .5 ? 'k' : 'd');
+  const cols = ['k','d','g','d','r','y','k','b','d'];
+  for (let i = 0; i < cols.length; i++){
+    const a1 = R() * 6.283, a2 = a1 + 1.3 + R() * 2.4, r1 = 2.5 + R() * 3.6, r2 = 2.5 + R() * 3.6;
+    line(7.5 + Math.cos(a1) * r1, 7.5 + Math.sin(a1) * r1, 7.5 + Math.cos(a2) * r2, 7.5 + Math.sin(a2) * r2, cols[i]);
+  }
+  line(11, 4, 12, 3, 'k');
+  plot(12, 2, 'l'); plot(13, 2, 'l'); plot(12, 1, 'l'); plot(13, 1, 'g'); plot(14, 0, 'y'); plot(14, 2, 'y');
+  return g;
+}
+const rotGrid = g => g.map((row, y) => row.map((_, x) => g[g.length - 1 - x][y]));
+SPR.tumble = []; { let g = tumbleGrid(20251013); for (let i = 0; i < 4; i++){ SPR.tumble.push(gridCanvas(g.map(r => r.join('')))); g = rotGrid(g); } }
+
+/* ---------- Staub ---------- */
+const DUSTC = ['#ddd7ca','#bdb6a8','#938d82'];
+function makeSpecks(R){
+  const s = []; const n = 4 + Math.floor(R() * 5);
+  for (let i = 0; i < n; i++) s.push({x:Math.round((R() - .5) * 11), y:Math.round((R() - .5) * 9), c:DUSTC[Math.floor(R() * 3)], s:R() < .2 ? 2 : 1});
+  if (R() < .3){ const fx = Math.round((R() - .5) * 6), fy = Math.round((R() - .5) * 4);
+    s.push({x:fx, y:fy, c:DUSTC[1], s:3}, {x:fx + 1, y:fy - 1, c:DUSTC[0], s:2}, {x:fx + 2, y:fy + 1, c:DUSTC[2], s:1}); }
+  return s;
+}
+function drawSpecks(c, x, y, specks){ for (const s of specks) rect(c, x + s.x, y + s.y, s.s, s.s, s.c); }
+
+/* ---------- Raum (vorgezeichneter Hintergrund) ---------- */
+function parquet(c, x0, y0, horiz, R){
+  const tones = ['#9a6440','#a26b44','#915d3a','#a8714a','#966140'];
+  for (let k = 0; k < 4; k++){
+    const col = tones[Math.floor(R() * tones.length)];
+    if (horiz){ rect(c, x0, y0 + k * 4, 16, 4, col); rect(c, x0, y0 + k * 4 + 3, 16, 1, '#7d4a2b'); rect(c, x0 + Math.floor(R() * 12), y0 + k * 4 + 1, 3, 1, 'rgba(60,30,15,.28)'); }
+    else { rect(c, x0 + k * 4, y0, 4, 16, col); rect(c, x0 + k * 4 + 3, y0, 1, 16, '#7d4a2b'); rect(c, x0 + k * 4 + 1, y0 + Math.floor(R() * 12), 1, 3, 'rgba(60,30,15,.28)'); }
+  }
+}
+function paintingFrame(c, x, y){ rect(c, x, y, 32, 20, BRASS); rect(c, x + 1, y + 1, 30, 18, BRASS_D); }
+function drawCaptchaPainting(c, x, y){
+  paintingFrame(c, x, y); rect(c, x + 2, y + 2, 28, 16, '#e8e0cc');
+  const R = rng(42); const cols = [P.n, P.k, P.p, P.t, P.B];
+  for (let i = 0; i < 5; i++){
+    const cx = x + 5 + i * 5, cy = y + 9 + Math.round(Math.sin(i * 1.4) * 2);
+    c.fillStyle = cols[i];
+    for (let j = 0; j < 5; j++) c.fillRect(cx + (j % 2) + Math.round(Math.sin(j + i) * 1.2), cy - 3 + j, 1, 1);
+    for (let j = 0; j < 3; j++) c.fillRect(cx + Math.round((R() - .5) * 4), cy + Math.round((R() - .5) * 6), 1, 1);
+  }
+  c.fillStyle = P.r; for (let i = 0; i < 26; i++) c.fillRect(x + 3 + i, y + 10 + Math.round(Math.sin(i * .6) * 2), 1, 1);
+  rect(c, x + 13, y + 23, 6, 2, BRASS);
+}
+function drawAmpelPainting(c, x, y){
+  paintingFrame(c, x, y); rect(c, x + 2, y + 2, 28, 16, P.w); rect(c, x + 2, y + 2, 28, 3, P.B);
+  const lit = {'0,1':P.r, '1,1':P.y, '2,0':P.e, '1,2':P.r};
+  for (let r = 0; r < 3; r++) for (let q = 0; q < 3; q++){
+    const cx = x + 3 + q * 9, cy = y + 6 + r * 4;
+    rect(c, cx, cy, 8, 3, (q + r) % 2 ? '#8b9bb4' : '#7a8aa3');
+    const L = lit[q + ',' + r];
+    if (L){ rect(c, cx + 3, cy, 2, 3, P.k); rect(c, cx + 3, cy + 1, 1, 1, L); }
+  }
+  rect(c, x + 13, y + 23, 6, 2, BRASS);
+}
+const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
+(function buildBG(){
+  const b = bg.getContext('2d'); const R = rng(7);
+  for (let ty = 2; ty < 13; ty++) for (let tx = 1; tx < 15; tx++) parquet(b, tx * 16, ty * 16, (tx + ty) % 2 === 0, R);
+  rect(b, 0, 0, W, 32, '#4a1d33');
+  for (let y = 3; y < 21; y += 5) for (let x = (y % 2) * 4; x < W; x += 8){ rect(b, x, y, 1, 1, '#5e2944'); rect(b, x - 1, y + 1, 3, 1, '#552540'); rect(b, x, y + 2, 1, 1, '#5e2944'); }
+  rect(b, 0, 22, W, 1, BRASS); rect(b, 0, 23, W, 1, BRASS_D);
+  rect(b, 0, 24, W, 6, '#3a1528'); for (let x = 8; x < W; x += 16) rect(b, x, 25, 1, 4, '#2b0f1d');
+  rect(b, 0, 30, W, 2, P.k);
+  b.fillStyle = 'rgba(0,0,0,.25)'; b.fillRect(16, 32, 224, 3);
+  rect(b, 0, 0, 16, H, '#4a1d33'); rect(b, 240, 0, 16, H, '#4a1d33');
+  rect(b, 0, 208, W, 16, '#4a1d33');
+  for (let y = 36; y < 206; y += 8){ rect(b, 6, y, 1, 1, '#5e2944'); rect(b, 249, y, 1, 1, '#5e2944'); }
+  for (let x = 6; x < 250; x += 8) rect(b, x, 216, 1, 1, '#5e2944');
+  rect(b, 13, 32, 1, 177, BRASS_D); rect(b, 14, 32, 2, 177, P.k);
+  rect(b, 242, 32, 1, 177, BRASS_D); rect(b, 240, 32, 2, 177, P.k);
+  rect(b, 13, 211, 230, 1, BRASS_D); rect(b, 14, 208, 228, 3, P.k);
+  rect(b, 0, 0, 1, H, P.k); rect(b, 255, 0, 1, H, P.k); rect(b, 0, 223, W, 1, P.k);
+  drawCaptchaPainting(b, 48, 1); drawAmpelPainting(b, 176, 1);
+})();
+
+/* ---------- Exponate (Pixel per Code) ---------- */
+function plinth(c, X, Y){
+  rect(c, X, Y + 10, 16, 4, '#e8e2d8'); rect(c, X, Y + 14, 16, 14, '#cfc8bd'); rect(c, X + 12, Y + 14, 4, 14, '#b3ab9f');
+  rect(c, X, Y + 14, 16, 1, '#a39b8f'); rect(c, X, Y + 27, 16, 1, '#8f877b');
+}
+function drawTV(c, X, Y, mode, time){
+  rect(c, X + 3, Y + 26, 2, 5, '#3a2418'); rect(c, X + 21, Y + 26, 2, 5, '#3a2418');
+  c.fillStyle = P.k; for (let i = 0; i < 7; i++){ c.fillRect(X + 10 - Math.round(i * .6), Y + 7 - i, 1, 1); c.fillRect(X + 15 + Math.round(i * .7), Y + 7 - i, 1, 1); }
+  rect(c, X, Y + 8, 26, 18, '#7a5236'); rect(c, X, Y + 8, 26, 1, '#9c6a45'); rect(c, X, Y + 25, 26, 1, '#55361f');
+  rect(c, X + 2, Y + 10, 16, 13, P.k);
+  const sx = X + 3, sy = Y + 11;
+  if (mode === 'play'){
+    rect(c, sx, sy, 14, 11, P.n);
+    rect(c, sx + 5, sy + 3, 4, 4, P.y); rect(c, sx + 4, sy + 7, 6, 4, P.b);
+    if (Math.floor(time * 10) % 2) rect(c, sx, sy + ((Math.floor(time * 30)) % 11), 14, 1, 'rgba(255,255,255,.25)');
+  } else if (mode === 'hung'){
+    const j = Math.floor(time * 8) % 2;
+    rect(c, sx, sy, 14, 11, P.n); rect(c, sx + 5 + j, sy + 3, 4, 4, P.y); rect(c, sx + 4 + j, sy + 7, 6, 4, P.b);
+    rect(c, sx, sy + 4 + j * 3, 14, 2, P.p); rect(c, sx + 2, sy + 5 + j * 3, 3, 1, P.c);
+  } else {
+    const bars = [P.w, P.y, P.c, P.G, P.p, P.r, P.B];
+    bars.forEach((col, i) => rect(c, sx + i * 2, sy, 2, 11, col));
+    rect(c, sx, sy + (Math.floor(time * 12) % 11), 14, 1, 'rgba(26,28,44,.35)');
+  }
+  rect(c, X + 20, Y + 12, 3, 3, BRASS); rect(c, X + 20, Y + 17, 3, 3, BRASS);
+  for (let i = 0; i < 3; i++) rect(c, X + 19, Y + 21 + i, 5, 1, i % 2 ? '#55361f' : '#6a4529');
+}
+function drawFortuna(c, X, Y, talking, time){
+  rect(c, X, Y, 30, 6, BRASS); rect(c, X + 1, Y + 1, 28, 4, BRASS_D);
+  for (let i = 0; i < 7; i++) rect(c, X + 3 + i * 4, Y + 2, 2, 2, ((i + Math.floor(time * (talking ? 10 : 3))) % 2) ? P.y : P.w);
+  rect(c, X, Y + 6, 30, 26, '#73464c'); rect(c, X + 2, Y + 7, 26, 23, P.n);
+  rect(c, X + 7, Y + 21, 16, 9, P.r); rect(c, X + 9, Y + 19, 12, 3, P.r);
+  rect(c, X + 12, Y + 12, 6, 7, P.y);
+  rect(c, X + 11, Y + 9, 8, 4, P.p); rect(c, X + 12, Y + 8, 6, 1, P.p); rect(c, X + 14, Y + 10, 2, 2, P.G);
+  const eye = talking ? ((Math.floor(time * 8) % 2) ? P.c : P.w) : P.k;
+  rect(c, X + 13, Y + 14, 1, 1, eye); rect(c, X + 16, Y + 14, 1, 1, eye);
+  rect(c, X + 13, Y + 17, 4, 1, P.k);
+  if (talking && Math.floor(time * 6) % 2) rect(c, X + 14, Y + 18, 2, 1, P.k);
+  rect(c, X + 8, Y + 25, 3, 2, P.y); rect(c, X + 19, Y + 25, 3, 2, P.y);
+  if (talking){ c.fillStyle = 'rgba(115,239,247,.25)'; c.fillRect(X + 10, Y + 22, 10, 9); }
+  rect(c, X + 12, Y + 24, 6, 5, P.c); rect(c, X + 11, Y + 25, 8, 3, P.c); rect(c, X + 13, Y + 25, 1, 1, P.w);
+  c.fillStyle = 'rgba(255,255,255,.18)'; c.fillRect(X + 4, Y + 8, 1, 20); c.fillRect(X + 6, Y + 8, 1, 11); c.fillRect(X + 25, Y + 10, 1, 8);
+  rect(c, X, Y + 32, 30, 18, '#73464c'); rect(c, X, Y + 32, 30, 2, BRASS);
+  rect(c, X + 3, Y + 36, 24, 11, '#5c3539');
+  rect(c, X + 5, Y + 38, 6, 3, BRASS); rect(c, X + 6, Y + 39, 4, 1, P.k);
+  rect(c, X + 18, Y + 38, 6, 4, P.r); rect(c, X + 19, Y + 38, 4, 1, P.o);
+  rect(c, X, Y + 48, 30, 2, '#3a2418');
+}
+function drawBust(c, X, Y){
+  plinth(c, X, Y);
+  rect(c, X + 3, Y + 4, 10, 7, '#d9d4cc'); rect(c, X + 10, Y + 4, 3, 7, '#bdb5aa');
+  rect(c, X + 6, Y + 1, 4, 3, '#cfc8bd');
+  rect(c, X + 5, Y - 7, 6, 9, '#e8e2d8'); rect(c, X + 9, Y - 6, 2, 8, '#cfc8bd');
+  rect(c, X + 5, Y - 7, 6, 2, '#b3ab9f'); rect(c, X + 4, Y - 5, 1, 3, '#b3ab9f');
+  rect(c, X + 6, Y - 3, 1, 1, '#9a9286'); rect(c, X + 9, Y - 3, 1, 1, '#9a9286'); rect(c, X + 7, Y - 1, 2, 1, '#b3ab9f');
+}
+function drawWiki(c, X, Y, printed, time){
+  plinth(c, X, Y);
+  rect(c, X + 1, Y - 3, 14, 13, '#d6c7a1'); rect(c, X + 1, Y - 3, 14, 1, '#e6dab8'); rect(c, X + 13, Y - 2, 2, 12, '#b8a77f');
+  rect(c, X + 3, Y - 1, 9, 7, P.k);
+  rect(c, X + 4, Y, 5, 1, P.e); rect(c, X + 4, Y + 2, 6, 1, P.e); if (Math.floor(time * 2) % 2) rect(c, X + 4, Y + 4, 2, 1, P.G);
+  rect(c, X + 2, Y + 10, 12, 3, '#b8a77f'); for (let i = 0; i < 5; i++) rect(c, X + 3 + i * 2, Y + 11, 1, 1, '#8f8063');
+  rect(c, X + 12, Y + 7, 3, printed ? 12 : 4, P.w); if (printed){ rect(c, X + 12, Y + 10, 2, 1, P.l); rect(c, X + 12, Y + 13, 3, 1, P.l); }
+}
+function drawDock(c, X, Y, charging, time){
+  rect(c, X - 1, Y - 2, 16, 12, P.k); rect(c, X, Y - 1, 14, 10, P.d); rect(c, X, Y - 1, 14, 2, P.g);
+  rect(c, X + 3, Y + 4, 2, 2, P.y); rect(c, X + 9, Y + 4, 2, 2, P.y);
+  rect(c, X + 6, Y, 2, 1, charging ? (Math.floor(time * 4) % 2 ? P.G : P.e) : P.G);
+}
+
+/* ---------- Texte ---------- */
+const IRR = 'iRR 605', TAF = 'Ausstellungstafel', FOR = 'Die Große Fortuna', VID = 'Erklärvideo', WIK = 'Wikipedia-Maschine', HINT = 'Hinweis';
+const WHO = {[IRR]:'irr', [TAF]:'tafel', [FOR]:'fortuna', [VID]:'video', [WIK]:'wiki', [HINT]:'hint'};
+const isTouch = () => document.body.classList.contains('touch');
+const INTRO = () => [
+  [IRR, 'Ei guude! Isch bin de iRR 605. Seit 560 Jahrn, 232 Taache unn zweieinhalb Stunde mach isch des Museum hier sauber.'],
+  [IRR, 'Kimmt zwar kaaner mehr her, gell? Aber dreggisch werd’s trotzdem.'],
+  [HINT, (isTouch() ? 'Fahr mit dem Stick über den Staub,' : 'Fahr mit den Pfeiltasten über den Staub,') + ' dann saugt iRR ihn auf. Ab 80 % sauber geht die Tür auf.'],
+  [HINT, 'Fahr gegen Ausstellungsstücke, um sie dir anzuschauen. TURBO saugt Kabel-Tumbleweeds weg, kostet aber Akku. Aufladen kannst du an der Ladestation unten links.'],
+];
+// Prophezeiungen: die ersten drei stammen aus dem Stück, der Rest sind Vorschläge zum Prüfen.
+const FORTUNE = [
+  'Ein spontanes Ereignis bringt frischen Schwung in deinen Alltag.',
+  'Jeder ist seines eigenen Glückes Schmied.',
+  'Probiere es mal mit Aus- und wieder Einschalten.',
+  'Bald betritt ein Fremder mit Zylinder dein Museum.',
+  'Wer viel saugt, muss viel niesen.',
+  'Dein Akku ist halb voll. Oder halb leer. Das entscheidest du.',
+  'Du wirst einen Theaterabend erleben, den du nicht vorhersehen kannst. Ich schon.',
+];
+let fortuneBag = [];
+const nextFortune = () => { if (!fortuneBag.length) fortuneBag = FORTUNE.map((_, i) => i).sort(() => Math.random() - .5); return FORTUNE[fortuneBag.pop()]; };
+
+const TXT = {
+  captcha: () => [
+    [TAF, '„Ohne Titel (CAPTCHA)“, um 2000. Verzerrte Buchstaben, mit denen Menschen beweisen sollten, dass sie keine Maschinen sind.'],
+    [TAF, 'Heute liest jede KI so etwas fehlerfrei. Übrig geblieben ist abstrakte Kunst.'],
+    [IRR, 'Was des bedeude soll, waaß kaaner. Seit Generatione zerbreche sich die Leut de Kopp drüber.'],
+  ],
+  ampel: () => [
+    [TAF, '„Wählen Sie alle Felder mit Ampeln aus.“ Bild-CAPTCHA, frühes 21. Jahrhundert.'],
+    [TAF, 'Millionen Menschen klickten hier Ampeln, Zebrastreifen und Busse an. Geschätzt 800 Millionen Stunden, unbezahlt. So lernten Maschinen das Sehen.'],
+    [IRR, 'Mir habbe des Gugge also von dene gelernt. Unn die habbe dafür nix gekrieht? Ei verbibbsch.'],
+  ],
+  tv: () => {
+    if (G.tvState === 'idle'){ G.tvState = 'hung'; return [
+      [VID, '„Willkommen in einer Welt ohne Chaos, ohne Unvorhersehbarkeiten – eine Welt, in der die Märkte endlich in perfekten Bahnen verlaufen. Kurzum: im Paradies.“'],
+      [VID, '„Früher wurde der Planet von biologischen Lebewesen namens Menschen bewohnt. Sie erfanden uns, die künstlichen Intelligenzen, um ihre Probleme zu lösen.“'],
+      [VID, '„Heute wird die Welt von künstlichen Systemen verwaltet. Datenbasiert und effizient, angepasst an die jeweiligen ökonomischen Bedi-bedi-bedi-bedi-bedi …“'],
+      [IRR, 'Ach, der hängt schon widder. Der braucht manchmal e … sanfte Neukalibrierung. Fahr nochemal dagesche!'],
+    ]; }
+    if (G.tvState === 'hung'){ G.tvState = 'fixed'; return [
+      [VID, '„… ngungen.“'],
+      [IRR, 'Na also. Des Ding werd ja net so oft geguckt. Eigentlich werd hier gar nix so richtisch oft geguckt.'],
+    ]; }
+    return [[VID, 'Das Video ist zu Ende. Bitte bewerten Sie Ihr Museumserlebnis mit ★ bis ★★★★★.'], [IRR, 'Fünf Sterne, gell? Isch bin ja quasi Personal.']];
+  },
+  fortuna: () => {
+    G.fortunaCount++; sfx.fortuna();
+    const L = [];
+    if (G.fortunaCount === 1) L.push([FOR, 'Hier spricht die Große Fortuna. Höre auf mich, denn ich sage dir deine Zukunft voraus.']);
+    L.push([FOR, nextFortune() + ' Dies ist die Wahrheit. Besuche mich wieder für mehr Weisheiten.']);
+    if (G.fortunaCount === 1) L.push([IRR, 'Wahnsinn, gell? Unn stimme tut’s aach. Meistens.']);
+    return L;
+  },
+  bust: () => [
+    [TAF, 'Büste eines Menschen. Gips, Name unbekannt. Menschen haben sich gern selbst ausgestellt.'],
+    [IRR, 'Komische Dinger, die Mensche. Hadde Köpp ganz ohne Kabel.'],
+  ],
+  wiki: () => { G.wikiPrinted = true; return [
+    [WIK, 'EINGABE: STAUB'],
+    [WIK, 'Staub, der: feinste Teilchen, die sich überall dort absetzen, wo niemand hinschaut. Siehe auch: Museum.'],
+    [IRR, 'Siehste. Steht sogar im Lexikon.'],
+  ]; },
+};
+
+/* ---------- Raumobjekte & Kollision ---------- */
+const DOOR = {x:112, w:32};
+const PAINT = [{id:'captcha', x0:48, x1:80}, {id:'ampel', x0:176, x1:208}];
+const OBJ = [
+  {id:'tv',      x:18,  y:36,  w:26, h:12, vx:18,  vy:18},
+  {id:'fortuna', x:208, y:46,  w:30, h:16, vx:208, vy:12},
+  {id:'bust',    x:64,  y:132, w:16, h:12, vx:64,  vy:116},
+  {id:'wiki',    x:176, y:132, w:16, h:12, vx:176, vy:116},
+];
+const DOCK = {x:18, y:194, cx:25, cy:198};
+const WALL = {id:'wall'}, WALL_TOP = {id:'walltop'};
+const overlaps = (ax, ay, aw, ah, bx, by, bw, bh) => ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+function solidAt(x, y, w, h){
+  if (x < 16 || x + w > 240 || y + h > 208) return WALL;
+  if (y < 32){ const inDoor = G.door.open && x >= DOOR.x + 1 && x + w <= DOOR.x + DOOR.w - 1; if (!inDoor || y < -4) return WALL_TOP; }
+  for (const o of OBJ) if (overlaps(x, y, w, h, o.x, o.y, o.w, o.h)) return o;
+  return null;
+}
+function move(e, dx, dy, hw, ht, hb){
+  let hx = null, hy = null;
+  if (dx){ const s = solidAt(e.x + dx - hw, e.y - ht, hw * 2, ht + hb); if (s) hx = s; else e.x += dx; }
+  if (dy){ const s = solidAt(e.x - hw, e.y + dy - ht, hw * 2, ht + hb); if (s) hy = s; else e.y += dy; }
+  return [hx, hy];
+}
+
+/* ---------- Ton (WebAudio, Chiptune-Piepser) ---------- */
+let AC = null, muted = false, noiseBuf = null;
+function ensureAudio(){
+  if (!AC){ try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+  if (AC && AC.state === 'suspended') AC.resume().catch(() => {});
+}
+function tone(f, d, type = 'square', v = .06, f2 = null, delay = 0){
+  if (!AC || muted) return;
+  const t0 = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + d);
+  g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+  o.connect(g).connect(AC.destination); o.start(t0); o.stop(t0 + d + .02);
+}
+function noise(d, v = .1, freq = 1200, delay = 0){
+  if (!AC || muted) return;
+  if (!noiseBuf){ noiseBuf = AC.createBuffer(1, AC.sampleRate * .5, AC.sampleRate); const ch = noiseBuf.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; }
+  const t0 = AC.currentTime + delay, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = freq;
+  g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + d);
+  s.connect(f).connect(g).connect(AC.destination); s.start(t0); s.stop(t0 + d + .02);
+}
+let lastSuck = 0;
+const sfx = {
+  suck(){ if (T - lastSuck < .05) return; lastSuck = T; tone(900 + Math.random() * 500, .04, 'square', .025); },
+  bonk(){ tone(140, .09, 'square', .07, 70); },
+  hit(){ noise(.25, .18, 600); tone(220, .25, 'sawtooth', .05, 60); },
+  turbo(){ noise(.3, .08, 2400); tone(300, .25, 'sawtooth', .035, 900); },
+  gulp(){ tone(400, .12, 'square', .06, 1200); tone(1200, .08, 'square', .04, null, .12); },
+  sneeze(){ tone(500, .15, 'triangle', .07, 900); noise(.35, .25, 1800, .15); },
+  fortuna(){ [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, .12, 'triangle', .07, null, i * .1)); },
+  door(){ [392, 494, 587, 784].forEach((f, i) => tone(f, .14, 'square', .05, null, i * .11)); },
+  win(){ [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, .18, 'square', .05, null, i * .12)); },
+  low(){ tone(880, .1, 'square', .05); tone(660, .15, 'square', .05, null, .12); },
+  power(){ tone(600, .5, 'square', .05, 80); },
+  blip(who){ tone((who === 'fortuna' ? 330 : who === 'irr' ? 640 : 480) + Math.random() * 80, .025, 'square', .018); },
+};
+
+/* ---------- Spielzustand ---------- */
+let state = 'title', galleryReturn = 'title', T = 0;
+let G, irr, tumbles, dust, particles, pending = null, cool = {};
+function resetGame(){
+  G = {score:0, collected:0, visited:new Set(), tvState:'idle', fortunaCount:0, wikiPrinted:false, door:{open:false, anim:0}, time:0, flags:{}, lastBonk:0};
+  irr = {x:DOCK.cx, y:DOCK.cy, dir:'right', turbo:0, turboCd:0, stun:0, inv:0, knock:null, bat:100, sneeze:0, sneezeT:0, wob:0, wobT:8, wvx:0, wvy:0, lowWarned:false, dead:false, charging:false};
+  const R = rng(99); dust = [];
+  for (let ty = 2; ty < 13; ty++) for (let tx = 1; tx < 15; tx++){
+    const cx = tx * 16 + 8, cy = ty * 16 + 8;
+    if (tx === 1 && ty === 12) continue;
+    if (OBJ.some(o => overlaps(cx - 7, cy - 7, 14, 14, o.x - 2, o.y - 8, o.w + 4, o.h + 10))) continue;
+    if (R() < .2) continue;
+    dust.push({x:cx + Math.round((R() - .5) * 6), y:cy + Math.round((R() - .5) * 6), specks:makeSpecks(R), got:false});
+  }
+  tumbles = [[200, 170], [128, 90], [80, 180]].map(([x, y], i) => ({x, y, vx:(i % 2 ? -1 : 1) * 30, vy:(i === 1 ? 1 : -1) * 20, rot:i, windT:1 + i, alive:true, respawn:0}));
+  particles = []; pending = null; cool = {};
+  document.querySelectorAll('.bubble').forEach(b => b.remove());
+}
+resetGame();
+
+/* ---------- Sprechblasen & Partikel ---------- */
+const bubblesEl = $('#bubbles');
+function bubble(text, x, y, ms = 1200){
+  const b = document.createElement('div'); b.className = 'bubble'; b.textContent = text;
+  b.style.left = (x / W * 100) + '%'; b.style.top = (y / H * 100) + '%';
+  bubblesEl.appendChild(b); setTimeout(() => b.remove(), ms);
+}
+function puff(d){
+  for (const s of d.specks) particles.push({x:d.x + s.x, y:d.y + s.y, tx:true, life:.18, c:s.c});
+}
+function updateParticles(dt){
+  for (const p of particles){
+    if (p.tx){ p.x += (irr.x - p.x) * Math.min(1, dt * 14); p.y += (irr.y - p.y) * Math.min(1, dt * 14); }
+    else { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .9; p.vy *= .9; }
+    p.life -= dt;
+  }
+  particles = particles.filter(p => p.life > 0);
+}
+
+/* ---------- Dialog ---------- */
+const dlg = $('#dialog'), dName = $('#dname'), dText = $('#dtext');
+let dq = [], dcur = null, dshown = 0, dDone = null;
+function say(lines, done){ dq = lines.slice(); dDone = done || null; state = 'dialog'; dlg.hidden = false; nextLine(); }
+function nextLine(){
+  if (!dq.length){ dlg.hidden = true; dcur = null; state = 'play'; const f = dDone; dDone = null; if (f) f(); return; }
+  dcur = dq.shift(); dshown = 0;
+  dName.textContent = dcur[0]; dlg.dataset.who = WHO[dcur[0]] || 'irr';
+  dText.textContent = ''; dlg.classList.remove('done');
+}
+function updateDialog(dt){
+  if (!dcur) return;
+  const L = dcur[1].length;
+  if (dshown < L){
+    const before = Math.floor(dshown); dshown = Math.min(L, dshown + dt * 50); const now = Math.floor(dshown);
+    if (now !== before){ dText.textContent = dcur[1].slice(0, now); if (now % 3 === 0) sfx.blip(dlg.dataset.who); }
+    if (dshown >= L) dlg.classList.add('done');
+  }
+}
+function advance(){
+  if (!dcur) return;
+  if (dshown < dcur[1].length){ dshown = dcur[1].length; dText.textContent = dcur[1]; dlg.classList.add('done'); }
+  else nextLine();
+}
+const speaking = who => state === 'dialog' && dcur && dcur[0] === who;
+
+/* ---------- Eingabe ---------- */
+const keys = {}; const input = {sx:0, sy:0, action:false};
+function press(){
+  ensureAudio();
+  if (state === 'dialog') advance();
+  else if (state === 'play') input.action = true;
+}
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k) && e.target.tagName !== 'BUTTON') e.preventDefault();
+  if (e.repeat) return;
+  keys[k] = true;
+  if ((k === ' ' || k === 'enter' || k === 'j') && e.target.tagName !== 'BUTTON') press();
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+function readInput(){
+  let x = 0, y = 0;
+  if (keys.arrowleft || keys.a) x -= 1; if (keys.arrowright || keys.d) x += 1;
+  if (keys.arrowup || keys.w) y -= 1; if (keys.arrowdown || keys.s) y += 1;
+  if (input.sx || input.sy){ x = input.sx; y = input.sy; }
+  const m = Math.hypot(x, y); if (m > 1){ x /= m; y /= m; }
+  return [x, y];
+}
+if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+addEventListener('touchstart', () => document.body.classList.add('touch'), {once:true, passive:true});
+const stick = $('#stick'), knob = $('#knob'); let sid = null;
+function stickUpd(e){
+  const r = stick.getBoundingClientRect(), R = r.width / 2 * .62;
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const m = Math.hypot(dx, dy); if (m > R){ dx *= R / m; dy *= R / m; }
+  input.sx = Math.abs(dx / R) < .18 ? 0 : dx / R; input.sy = Math.abs(dy / R) < .18 ? 0 : dy / R;
+  knob.style.transform = `translate(${dx}px,${dy}px)`;
+}
+stick.addEventListener('pointerdown', e => { e.preventDefault(); ensureAudio(); sid = e.pointerId; stick.setPointerCapture(sid); stickUpd(e); });
+stick.addEventListener('pointermove', e => { if (e.pointerId === sid) stickUpd(e); });
+const stickEnd = e => { if (e.pointerId !== sid) return; sid = null; input.sx = input.sy = 0; knob.style.transform = ''; };
+stick.addEventListener('pointerup', stickEnd); stick.addEventListener('pointercancel', stickEnd);
+$('#btnTurbo').addEventListener('pointerdown', e => { e.preventDefault(); press(); });
+dlg.addEventListener('click', () => { ensureAudio(); advance(); });
+cv.addEventListener('click', () => { if (state === 'dialog') advance(); });
+
+/* ---------- Spiellogik ---------- */
+function interact(id){
+  if ((cool[id] || 0) > T) return;
+  sfx.bonk();
+  if (!G.visited.has(id)){ G.visited.add(id); G.score += 100; bubble('+100', irr.x, irr.y - 12, 900); }
+  const lines = TXT[id]();
+  say(lines, () => { cool[id] = T + 2.5; });
+}
+function onBump(hx, hy, vx, vy){
+  if (hy === WALL_TOP && vy < 0){ const p = PAINT.find(p => irr.x > p.x0 - 3 && irr.x < p.x1 + 3); if (p){ bounce(vx, vy); interact(p.id); return; } }
+  const s = hx || hy;
+  if (s && s !== WALL && s !== WALL_TOP){ bounce(vx, vy); interact(s.id); return; }
+  if (T - G.lastBonk > .35){ G.lastBonk = T; sfx.bonk(); }
+  if (irr.turbo > 0){ irr.turbo = 0; bounce(vx, vy); }
+}
+function bounce(vx, vy){ const m = Math.hypot(vx, vy) || 1; irr.knock = {vx:-vx / m * 70, vy:-vy / m * 70, t:.1}; irr.turbo = 0; }
+function sneeze(){
+  irr.sneeze = 0; irr.sneezeT = .5;
+  const d = DIRV[irr.dir]; irr.knock = {vx:-d[0] * 90, vy:-d[1] * 90, t:.22};
+  sfx.sneeze();
+  for (let i = 0; i < 14; i++) particles.push({x:irr.x + d[0] * 8, y:irr.y + d[1] * 6, vx:d[0] * 90 + (Math.random() - .5) * 80, vy:d[1] * 90 + (Math.random() - .5) * 80, life:.4, c:DUSTC[i % 3]});
+  const near = dust.filter(x => x.got).sort((a, b) => Math.hypot(a.x - irr.x, a.y - irr.y) - Math.hypot(b.x - irr.x, b.y - irr.y)).slice(0, 2);
+  near.forEach(x => { x.got = false; G.collected--; });
+  if (!G.flags.sneeze){ G.flags.sneeze = true; pending = {d:.6, lines:[[IRR, 'HATSCHI! … Stauballergie. Ausgerechnet isch. Wenn de Niesreiz voll is, muss isch niese – unn de Staub fliescht widder raus. Mit Pause saugt sich’s besser.']]}; }
+  else bubble('HATSCHI!', irr.x, irr.y - 14, 900);
+}
+function hitByTumble(tw){
+  irr.bat = Math.max(0, irr.bat - 8); irr.stun = .6; irr.inv = 1.4;
+  const a = Math.atan2(irr.y - tw.y, irr.x - tw.x); irr.knock = {vx:Math.cos(a) * 110, vy:Math.sin(a) * 110, t:.18};
+  tw.vx = -tw.vx; tw.vy = -tw.vy; sfx.hit();
+  if (!G.flags.tumble){ G.flags.tumble = true; pending = {d:.6, lines:[[IRR, 'Kabelsalat! Die Kabel-Tumbleweeds rolle hier rum, seit kaaner mehr was einsteckt. Mit TURBO saug isch die weg.']]}; }
+  else bubble(['Kabelsalat!', 'Ei verbibbsch!', 'Aua!'][Math.floor(Math.random() * 3)], irr.x, irr.y - 14, 900);
+}
+function suckTumble(tw){
+  tw.alive = false; tw.respawn = 7; G.score += 50; sfx.gulp(); bubble('+50', tw.x, tw.y - 10, 800);
+  for (let i = 0; i < 10; i++) particles.push({x:tw.x, y:tw.y, tx:true, life:.2, c:[P.k, P.d, P.r, P.y][i % 4]});
+}
+function respawnTumble(tw){
+  for (let i = 0; i < 40; i++){
+    const x = 24 + Math.random() * 208, y = 44 + Math.random() * 156;
+    if (Math.hypot(x - irr.x, y - irr.y) < 80) continue;
+    if (solidAt(x - 6, y - 6, 12, 12)) continue;
+    Object.assign(tw, {x, y, alive:true, windT:0}); return;
+  }
+  tw.respawn = 1;
+}
+function batteryEmpty(){
+  if (irr.dead) return; irr.dead = true; sfx.power();
+  say([[IRR, 'Akku leer … Isch fahr nur korz an die Ladestation.']], () => {
+    Object.assign(irr, {x:DOCK.cx, y:DOCK.cy, bat:100, dead:false, lowWarned:false, knock:null, turbo:0, stun:0});
+  });
+}
+function win(){
+  state = 'end'; sfx.win();
+  $('#eScore').textContent = G.score; $('#eExp').textContent = G.visited.size;
+  const s = Math.round(G.time); $('#eTime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  $('#end').hidden = false;
+}
+
+function updatePlay(dt){
+  G.time += dt;
+  let [ix, iy] = readInput();
+  const mag = Math.hypot(ix, iy);
+  if (irr.stun > 0){ irr.stun -= dt; ix = iy = 0; }
+  irr.sneezeT = Math.max(0, irr.sneezeT - dt); irr.inv = Math.max(0, irr.inv - dt); irr.turboCd = Math.max(0, irr.turboCd - dt);
+  if (input.action){ input.action = false;
+    if (irr.turboCd <= 0 && irr.stun <= 0 && irr.bat > 3){ irr.turbo = .35; irr.turboCd = .7; irr.bat -= 3; sfx.turbo(); } }
+  let vx = ix * 58, vy = iy * 58;
+  if (irr.turbo > 0){
+    irr.turbo -= dt; const d = DIRV[irr.dir];
+    const tx = mag > .2 ? ix : d[0], ty = mag > .2 ? iy : d[1], m = Math.hypot(tx, ty) || 1;
+    vx = tx / m * 170; vy = ty / m * 170;
+    if (Math.random() < .6) particles.push({x:irr.x - tx / m * 7, y:irr.y + 2 - ty / m * 5, vx:-tx / m * 30, vy:-ty / m * 30, life:.15, c:P.w});
+  }
+  irr.wobT -= dt;
+  if (irr.wobT <= 0){ irr.wobT = 7 + Math.random() * 6;
+    if (mag > .3 && irr.turbo <= 0){ irr.wob = .5; const a = Math.atan2(iy, ix) + (Math.random() < .5 ? 1 : -1) * Math.PI / 2; irr.wvx = Math.cos(a) * 34; irr.wvy = Math.sin(a) * 34; bubble('?', irr.x, irr.y - 12, 700); } }
+  if (irr.wob > 0){ irr.wob -= dt; vx += irr.wvx; vy += irr.wvy; }
+  if (irr.knock){ vx = irr.knock.vx; vy = irr.knock.vy; irr.knock.t -= dt; if (irr.knock.t <= 0) irr.knock = null; }
+  else if (mag > .2) irr.dir = Math.abs(ix) > Math.abs(iy) ? (ix > 0 ? 'right' : 'left') : (iy > 0 ? 'down' : 'up');
+  const [hx, hy] = move(irr, vx * dt, vy * dt, 6, 4, 5);
+  if ((hx || hy) && !irr.knock) onBump(hx, hy, vx, vy);
+  if (state !== 'play') return;
+  const moving = Math.hypot(vx, vy) > 5;
+  irr.charging = Math.hypot(irr.x - DOCK.cx, irr.y - DOCK.cy) < 9;
+  if (irr.charging){ irr.bat = Math.min(100, irr.bat + 30 * dt); if (irr.bat > 30) irr.lowWarned = false; }
+  else irr.bat -= (moving ? .85 : .12) * dt;
+  if (irr.bat < 20 && !irr.lowWarned){ irr.lowWarned = true; sfx.low(); bubble('Akku! Ab zur Ladestation.', irr.x, irr.y - 14, 1800); }
+  if (irr.bat <= 0){ irr.bat = 0; batteryEmpty(); return; }
+  for (const d of dust){
+    if (!d.got && Math.abs(d.x - irr.x) < 9 && Math.abs(d.y - (irr.y + 1)) < 8){
+      d.got = true; G.collected++; G.score += 10; irr.sneeze += 7; sfx.suck(); puff(d);
+    }
+  }
+  irr.sneeze = Math.max(0, irr.sneeze - 12 * dt);
+  if (irr.sneeze >= 100) sneeze();
+  if (!G.door.open && G.collected / dust.length >= .8){ G.door.open = true; sfx.door(); bubble('Die Tür is uff!', 128, 44, 2200); }
+  if (G.door.open) G.door.anim = Math.min(1, G.door.anim + dt);
+  if (G.door.open && irr.y < 22){ win(); return; }
+  for (const tw of tumbles){
+    if (!tw.alive){ tw.respawn -= dt; if (tw.respawn <= 0) respawnTumble(tw); continue; }
+    tw.windT -= dt;
+    if (tw.windT <= 0){ tw.windT = 2 + Math.random() * 3; const a = Math.random() * Math.PI * 2, sp = 22 + Math.random() * 22; tw.vx = Math.cos(a) * sp; tw.vy = Math.sin(a) * sp; }
+    const [thx, thy] = move(tw, tw.vx * dt, tw.vy * dt, 5, 5, 5);
+    if (thx) tw.vx = -tw.vx; if (thy) tw.vy = -tw.vy;
+    tw.rot += dt * Math.hypot(tw.vx, tw.vy) / 9 * (tw.vx >= 0 ? 1 : -1);
+    const dx = tw.x - irr.x, dy = tw.y - (irr.y + 1);
+    if (dx * dx + dy * dy < 121){ if (irr.turbo > 0) suckTumble(tw); else if (irr.inv <= 0 && !irr.knock) hitByTumble(tw); }
+  }
+  updateParticles(dt);
+  if (pending){ pending.d -= dt; if (pending.d <= 0){ const p = pending; pending = null; say(p.lines); } }
+}
+
+/* ---------- Zeichnen ---------- */
+function drawDoor(){
+  const X = DOOR.x, h = Math.round(30 * (1 - G.door.anim));
+  rect(ctx, X - 2, 0, 36, 32, P.k);
+  rect(ctx, X, 0, 32, 30, '#0d0e16');
+  if (G.door.anim > 0){ ctx.fillStyle = `rgba(255,205,117,${.28 * G.door.anim})`; ctx.fillRect(X, h, 32, 30 - h); }
+  if (h > 0){ rect(ctx, X, 0, 32, h, '#6b7389'); for (let y = 2; y < h; y += 3) rect(ctx, X, y, 32, 1, '#4d5468'); }
+  rect(ctx, X + 11, 1, 10, 4, G.door.open ? P.G : P.t); rect(ctx, X + 13, 3, 5, 1, P.w); rect(ctx, X + 16, 2, 1, 3, P.w);
+}
+function drawIrr(){
+  if (irr.inv > 0 && Math.floor(T * 20) % 2) return;
+  const sh = irr.sneezeT > 0 ? Math.round(Math.sin(T * 60)) : 0;
+  const x = Math.round(irr.x) - 8 + sh, y = Math.round(irr.y) - 10;
+  shadow(ctx, irr.x, irr.y + 4, 7, 2);
+  drawIrrAt(ctx, x, y, irr.dir, T, {blink:irr.sneezeT > 0 || irr.stun > 0 || irr.dead ? true : undefined, led:irr.turbo > 0 ? P.o : (irr.bat < 20 ? (Math.floor(T * 4) % 2 ? P.r : P.d) : null)});
+  if (irr.stun > 0){ for (let i = 0; i < 3; i++){ const a = T * 8 + i * 2.1; rect(ctx, Math.round(irr.x + Math.cos(a) * 7), Math.round(y - 1 + Math.sin(a) * 2), 1, 1, P.y); } }
+}
+function render(){
+  ctx.drawImage(bg, 0, 0);
+  drawDoor();
+  drawDock(ctx, DOCK.x, DOCK.y, irr.charging && state === 'play', T);
+  for (const d of dust) if (!d.got) drawSpecks(ctx, d.x, d.y, d.specks);
+  const list = [];
+  const tvMode = speaking(VID) && G.tvState !== 'fixed' ? 'play' : (G.tvState === 'hung' ? 'hung' : 'idle');
+  for (const o of OBJ) list.push({y:o.y + o.h, f:() => {
+    if (o.id === 'tv') drawTV(ctx, o.vx, o.vy, tvMode, T);
+    else if (o.id === 'fortuna') drawFortuna(ctx, o.vx, o.vy, speaking(FOR), T);
+    else if (o.id === 'bust') drawBust(ctx, o.vx, o.vy);
+    else drawWiki(ctx, o.vx, o.vy, G.wikiPrinted, T);
+  }});
+  for (const tw of tumbles) if (tw.alive) list.push({y:tw.y + 5, f:() => {
+    shadow(ctx, tw.x, tw.y + 7, 6, 1);
+    const fr = ((Math.floor(tw.rot) % 4) + 4) % 4;
+    ctx.drawImage(SPR.tumble[fr], Math.round(tw.x) - 8, Math.round(tw.y) - 8 + (Math.floor(tw.rot * 2) % 2 ? -1 : 0));
+  }});
+  list.push({y:irr.y + 5, f:drawIrr});
+  list.sort((a, b) => a.y - b.y).forEach(e => e.f());
+  for (const p of particles) rect(ctx, Math.round(p.x), Math.round(p.y), 1, 1, p.c);
+}
+
+/* ---------- Titel & Galerie ---------- */
+const tCv = $('#titleSpr'), tCtx = tCv.getContext('2d');
+const titleDust = (() => { const R = rng(5); return [makeSpecks(R), makeSpecks(R)]; })();
+function drawTitle(){
+  tCtx.clearRect(0, 0, 40, 22);
+  const R = rng(3); parquet(tCtx, 0, 6, true, R); parquet(tCtx, 16, 6, false, R); parquet(tCtx, 32, 6, true, R);
+  const x = 12 + Math.round(Math.sin(T * 1.2) * 10), dir = Math.cos(T * 1.2) > 0 ? 'right' : 'left';
+  if (x > 22) {} else drawSpecks(tCtx, 31, 13, titleDust[0]);
+  if (x < 4) {} else drawSpecks(tCtx, 6, 15, titleDust[1]);
+  shadow(tCtx, x + 8, 18, 7, 2);
+  drawIrrAt(tCtx, x, 4, dir, T);
+}
+const galCanvases = [...document.querySelectorAll('[data-g]')].map(c => ({c, x:c.getContext('2d'), g:c.dataset.g}));
+const DUST_G = (() => { const R = rng(11); return [makeSpecks(R), makeSpecks(R)]; })();
+function drawGallery(){
+  for (const {c, x, g} of galCanvases){
+    x.clearRect(0, 0, c.width, c.height); rect(x, 0, 0, c.width, c.height, '#3d2030');
+    if (g === 'irr'){ shadow(x, 9, 15, 7, 2); drawIrrAt(x, 1, 1, 'down', T); }
+    else if (g === 'dirs'){ ['down', 'left', 'up', 'right'].forEach((d, i) => { shadow(x, 10 + i * 19, 15, 7, 2); drawIrrAt(x, 2 + i * 19, 1, d, T + i * .7); }); }
+    else if (g === 'tumble'){ SPR.tumble.forEach((s, i) => x.drawImage(s, 2 + i * 19, 1)); }
+    else if (g === 'dust'){ const R = rng(1); parquet(x, 0, 1, true, R); parquet(x, 16, 1, false, R); parquet(x, 32, 1, true, R); drawSpecks(x, 9, 9, DUST_G[0]); drawSpecks(x, 26, 9, DUST_G[1]); }
+    else if (g === 'fortuna'){ drawFortuna(x, 2, 2, Math.floor(T / 2) % 2 === 1, T); }
+    else if (g === 'tv'){ drawTV(x, 2, 0, ['idle', 'play', 'hung'][Math.floor(T / 1.5) % 3], T); }
+  }
+}
+function openGallery(){ galleryReturn = state === 'gallery' ? galleryReturn : state; if (state === 'play' || state === 'dialog'){} state = 'gallery'; $('#gallery').hidden = false; }
+function closeGallery(){ $('#gallery').hidden = true; state = galleryReturn; }
+
+/* ---------- HUD ---------- */
+const hBat = $('#hBat'), hClean = $('#hClean'), hScore = $('#hScore'), hExp = $('#hExp'), hSneeze = $('#hSneeze');
+let hudT = 0;
+function updateHUD(){
+  hBat.style.width = Math.max(0, irr.bat).toFixed(0) + '%'; hBat.dataset.low = irr.bat < 20;
+  hClean.textContent = Math.floor(G.collected / dust.length * 100) + ' %';
+  hScore.textContent = G.score; hExp.textContent = G.visited.size + '/6';
+  hSneeze.style.width = Math.min(100, irr.sneeze).toFixed(0) + '%';
+}
+
+/* ---------- Buttons ---------- */
+function startGame(){
+  ensureAudio(); resetGame();
+  $('#title').hidden = true; $('#end').hidden = true; $('#gallery').hidden = true;
+  state = 'play'; say(INTRO());
+}
+$('#btnPlay').addEventListener('click', startGame);
+$('#btnAgain').addEventListener('click', startGame);
+$('#btnGal').addEventListener('click', openGallery);
+$('#btnGalTop').addEventListener('click', () => state === 'gallery' ? closeGallery() : openGallery());
+$('#btnGalClose').addEventListener('click', closeGallery);
+$('#btnSound').addEventListener('click', e => { ensureAudio(); muted = !muted; e.currentTarget.textContent = muted ? 'Ton aus' : 'Ton an'; });
+
+/* ---------- Hauptschleife ---------- */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.033, (now - last) / 1000); last = now; T += dt;
+  if (state === 'play') updatePlay(dt);
+  else if (state === 'dialog'){ updateDialog(dt); updateParticles(dt); }
+  render();
+  if (state === 'title') drawTitle();
+  if (state === 'gallery') drawGallery();
+  hudT -= dt; if (hudT <= 0){ hudT = .08; updateHUD(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);})();
+</script>
