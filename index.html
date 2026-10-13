@@ -268,7 +268,10 @@ body.touch .keys{display:none}
 <script>
 (() => {
 'use strict';
-const W = 256, H = 224;
+const W = 256, H = 224;            // Raumgröße in Spielpixeln
+let VW = W, VH = H;                 // sichtbarer Ausschnitt (auf dem Handy kleiner, Kamera folgt iRR)
+const cam = {x:0, y:0};
+let bubbles = [];
 const $ = s => document.querySelector(s);
 const cv = $('#game'), ctx = cv.getContext('2d');
 ctx.imageSmoothingEnabled = false;
@@ -631,16 +634,22 @@ function resetGame(){
   }
   tumbles = [[200, 170], [128, 90], [80, 180]].map(([x, y], i) => ({x, y, vx:(i % 2 ? -1 : 1) * 30, vy:(i === 1 ? 1 : -1) * 20, rot:i, windT:1 + i, alive:true, respawn:0}));
   particles = []; pending = null; cool = {};
-  document.querySelectorAll('.bubble').forEach(b => b.remove());
+  document.querySelectorAll('.bubble').forEach(b => b.remove()); bubbles = [];
 }
 resetGame();
 
 /* ---------- Sprechblasen & Partikel ---------- */
 const bubblesEl = $('#bubbles');
 function bubble(text, x, y, ms = 1200){
-  const b = document.createElement('div'); b.className = 'bubble'; b.textContent = text;
-  b.style.left = (x / W * 100) + '%'; b.style.top = (y / H * 100) + '%';
-  bubblesEl.appendChild(b); setTimeout(() => b.remove(), ms);
+  const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text;
+  const b = {el, x, y}; bubbles.push(b); placeBubble(b);
+  bubblesEl.appendChild(el);
+  setTimeout(() => { el.remove(); bubbles = bubbles.filter(o => o !== b); }, ms);
+}
+function placeBubble(b){
+  const lx = Math.min(90, Math.max(10, (b.x - cam.x) / VW * 100));
+  const ty = Math.min(95, Math.max(12, (b.y - cam.y) / VH * 100));
+  b.el.style.left = lx + '%'; b.el.style.top = ty + '%';
 }
 function puff(d){
   for (const s of d.specks) particles.push({x:d.x + s.x, y:d.y + s.y, tx:true, life:.18, c:s.c});
@@ -853,6 +862,11 @@ function drawIrr(){
   if (irr.stun > 0){ for (let i = 0; i < 3; i++){ const a = T * 8 + i * 2.1; rect(ctx, Math.round(irr.x + Math.cos(a) * 7), Math.round(y - 1 + Math.sin(a) * 2), 1, 1, P.y); } }
 }
 function render(){
+  if (VW < W || VH < H){
+    cam.x = Math.max(0, Math.min(W - VW, irr.x - VW / 2));
+    cam.y = Math.max(0, Math.min(H - VH, irr.y - VH / 2));
+  } else { cam.x = 0; cam.y = 0; }
+  ctx.setTransform(1, 0, 0, 1, -Math.round(cam.x), -Math.round(cam.y));
   ctx.drawImage(bg, 0, 0);
   drawDoor();
   drawDock(ctx, DOCK.x, DOCK.y, irr.charging && state === 'play', T);
@@ -873,7 +887,34 @@ function render(){
   list.push({y:irr.y + 5, f:drawIrr});
   list.sort((a, b) => a.y - b.y).forEach(e => e.f());
   for (const p of particles) rect(ctx, Math.round(p.x), Math.round(p.y), 1, 1, p.c);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  for (const b of bubbles) placeBubble(b);
 }
+
+/* ---------- Handy: Ausschnitt statt ganzer Raum ---------- */
+const screenEl = $('#screen');
+function fit(){
+  const touch = document.body.classList.contains('touch');
+  let w = null;
+  if (!touch){ VW = W; VH = H; }
+  else {
+    const cab = $('.cabinet'), cs = getComputedStyle(cab);
+    const availW = cab.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const used = $('.topbar').offsetHeight + $('.hud').offsetHeight + $('.controls').offsetHeight + 3 * 12 + 38 + 20;
+    const availH = Math.max(200, innerHeight - used);
+    const s = Math.sqrt(availW * availH / 32000);           // ca. 32.000 Spielpixel sichtbar → große Sprites
+    VW = Math.max(128, Math.min(W, Math.round(availW / s / 2) * 2));
+    VH = Math.max(112, Math.min(H, Math.round(availH / s / 2) * 2));
+    w = Math.min(availW, availH * VW / VH);
+  }
+  if (cv.width !== VW || cv.height !== VH){ cv.width = VW; cv.height = VH; ctx.imageSmoothingEnabled = false; }
+  screenEl.style.aspectRatio = VW + ' / ' + VH;
+  screenEl.style.width = w ? w + 'px' : '';
+}
+addEventListener('resize', fit);
+addEventListener('orientationchange', () => setTimeout(fit, 200));
+addEventListener('touchstart', () => setTimeout(fit, 0), {once:true, passive:true});
+requestAnimationFrame(fit);
 
 /* ---------- Titel & Galerie ---------- */
 const tCv = $('#titleSpr'), tCtx = tCv.getContext('2d');
